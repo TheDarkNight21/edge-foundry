@@ -10,7 +10,9 @@ def load_model():
     )
 
 def run_model(prompt: str, llm: Llama):
-    out = llm(prompt, max_tokens=128, stop=["Q:", "Human:", "User:"], echo=True)
+    # Format the prompt for better responses
+    formatted_prompt = f"Human: {prompt}\nAssistant:"
+    out = llm(formatted_prompt, max_tokens=128, stop=["Human:", "User:", "\n\n"], echo=False)
     return out
 
 if __name__ == "__main__":
