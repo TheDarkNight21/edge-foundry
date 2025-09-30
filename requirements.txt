@@ -1,3 +1,6 @@
 llama-cpp-python==0.3.16
 huggingface_hub==0.35.3
 hf_xet==1.1.0
+fastapi==0.104.1
+uvicorn==0.24.0
+pyyaml==6.0.1
