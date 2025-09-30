@@ -4,6 +4,7 @@ FastAPI agent for running TinyLlama model locally.
 Exposes POST /inference endpoint for model inference.
 """
 
+import os
 import time
 import logging
 import yaml
@@ -19,16 +20,22 @@ logger = logging.getLogger(__name__)
 # Load configuration
 def load_config() -> Dict[str, Any]:
     """Load configuration from edgefoundry.yaml"""
-    try:
-        with open("edgefoundry.yaml", "r") as f:
-            config = yaml.safe_load(f)
-        return config
-    except FileNotFoundError:
-        logger.error("Configuration file edgefoundry.yaml not found")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing configuration file: {e}")
-        raise
+    # Try working directory first, then current directory
+    config_paths = ["./.edgefoundry/edgefoundry.yaml", "edgefoundry.yaml"]
+    
+    for config_path in config_paths:
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r") as f:
+                    config = yaml.safe_load(f)
+                logger.info(f"Loaded configuration from {config_path}")
+                return config
+            except yaml.YAMLError as e:
+                logger.error(f"Error parsing configuration file {config_path}: {e}")
+                continue
+    
+    logger.error("Configuration file edgefoundry.yaml not found in any expected location")
+    raise FileNotFoundError("Configuration file not found")
 
 # Load configuration
 config = load_config()
@@ -60,10 +67,24 @@ def load_model():
         logger.info("Loading model...")
         start_time = time.time()
         
-        # For now, use the existing load_model function
-        # In a production setup, you'd load from the config path
-        from load_model import load_model as load_tinyllama
-        model = load_tinyllama()
+        # Get model path from config
+        model_path = config.get("model_path", "./models/tinyllama.gguf")
+        
+        # If it's a relative path, try working directory first
+        if not os.path.isabs(model_path):
+            working_model_path = f"./.edgefoundry/{model_path}"
+            if os.path.exists(working_model_path):
+                model_path = working_model_path
+        
+        logger.info(f"Loading model from: {model_path}")
+        
+        # Load model using llama_cpp
+        model = Llama(
+            model_path=model_path,
+            n_ctx=2048,
+            n_gpu_layers=-1,
+            seed=1337,
+        )
         
         load_time = time.time() - start_time
         logger.info(f"Model loaded in {load_time:.2f} seconds")
@@ -94,6 +115,7 @@ async def inference(request: InferenceRequest):
     """
     Run inference on the loaded model with the provided prompt.
     """
+    global model
     try:
         # Ensure model is loaded
         if model is None:
