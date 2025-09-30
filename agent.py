@@ -12,6 +12,7 @@ from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from llama_cpp import Llama
+from telemetry import telemetry_db, get_memory_usage, count_tokens
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -124,11 +125,17 @@ async def inference(request: InferenceRequest):
         # Log the incoming request
         logger.info(f"Received inference request: {request.prompt[:100]}...")
         
+        # Get initial memory usage
+        initial_memory = get_memory_usage()
+        
         # Start timing
         start_time = time.time()
         
         # Format the prompt for better responses (using existing logic)
         formatted_prompt = f"Human: {request.prompt}\nAssistant:"
+        
+        # Count prompt tokens (approximate)
+        prompt_tokens = count_tokens(formatted_prompt)
         
         # Run inference
         result = model(
@@ -141,9 +148,32 @@ async def inference(request: InferenceRequest):
         
         # Calculate processing time
         processing_time = time.time() - start_time
+        latency_ms = processing_time * 1000
         
         # Extract response text
         response_text = result["choices"][0]["text"]
+        
+        # Count generated tokens (approximate)
+        generated_tokens = count_tokens(response_text)
+        
+        # Get final memory usage
+        final_memory = get_memory_usage()
+        memory_used = final_memory - initial_memory
+        
+        # Record telemetry data
+        try:
+            telemetry_db.record_inference(
+                prompt_length=prompt_tokens,
+                latency_ms=latency_ms,
+                tokens_generated=generated_tokens,
+                memory_mb=memory_used,
+                model_path=config.get("model_path", "unknown"),
+                temperature=request.temperature,
+                max_tokens=request.max_tokens
+            )
+            logger.info(f"Telemetry recorded: {latency_ms:.2f}ms, {generated_tokens} tokens, {memory_used:.2f}MB")
+        except Exception as te:
+            logger.error(f"Failed to record telemetry: {te}")
         
         # Log the response and timing
         logger.info(f"Generated response in {processing_time:.2f}s: {response_text[:100]}...")

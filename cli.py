@@ -18,6 +18,7 @@ import yaml
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from telemetry import TelemetryDB
 
 app = typer.Typer(help="Edge Foundry - Local AI Agent Management CLI")
 console = Console()
@@ -90,7 +91,7 @@ def init():
 
 @app.command()
 def deploy(
-    model: str = typer.Argument(..., help="Path to the model file to deploy"),
+    model: str = typer.Option(..., "--model", "-m", help="Path to the model file to deploy"),
     config: Optional[str] = typer.Option(None, "--config", "-c", help="Path to config file")
 ):
     """Deploy a model and configuration to the working directory."""
@@ -265,6 +266,70 @@ def logs():
                 console.print(line.rstrip())
     except Exception as e:
         console.print(f"❌ Error reading logs: {e}", style="bold red")
+
+@app.command()
+def metrics(
+    limit: int = typer.Option(20, "--limit", "-l", help="Number of recent records to show"),
+    summary_only: bool = typer.Option(False, "--summary", "-s", help="Show only summary statistics")
+):
+    """Show telemetry metrics from the SQLite database."""
+    try:
+        # Initialize telemetry database
+        db = TelemetryDB()
+        
+        # Get metrics data
+        metrics_data = db.get_metrics_summary(limit)
+        summary = metrics_data["summary"]
+        recent_records = metrics_data["recent_records"]
+        
+        if summary["total_inferences"] == 0:
+            console.print("📊 No telemetry data found. Run some inferences first!", style="bold yellow")
+            return
+        
+        # Show summary
+        console.print("\n📊 [bold blue]Telemetry Summary[/bold blue]")
+        summary_table = Table(title="Overall Statistics")
+        summary_table.add_column("Metric", style="cyan")
+        summary_table.add_column("Value", style="green")
+        
+        summary_table.add_row("Total Inferences", str(summary["total_inferences"]))
+        summary_table.add_row("Average Latency", f"{summary['avg_latency_ms']:.2f} ms")
+        summary_table.add_row("Average Tokens/sec", f"{summary['avg_tokens_per_second']:.2f}")
+        summary_table.add_row("Average Memory Usage", f"{summary['avg_memory_mb']:.2f} MB")
+        summary_table.add_row("First Inference", summary["first_inference"] or "N/A")
+        summary_table.add_row("Last Inference", summary["last_inference"] or "N/A")
+        
+        console.print(summary_table)
+        
+        if not summary_only and recent_records:
+            # Show recent records
+            console.print(f"\n📋 [bold blue]Recent Records (Last {len(recent_records)})[/bold blue]")
+            records_table = Table(title="Recent Inference Records")
+            records_table.add_column("Timestamp", style="cyan", width=20)
+            records_table.add_column("Prompt Tokens", style="yellow", justify="right")
+            records_table.add_column("Latency (ms)", style="green", justify="right")
+            records_table.add_column("Generated Tokens", style="yellow", justify="right")
+            records_table.add_column("Tokens/sec", style="green", justify="right")
+            records_table.add_column("Memory (MB)", style="blue", justify="right")
+            records_table.add_column("Temperature", style="magenta", justify="right")
+            
+            for record in recent_records:
+                timestamp = record[1][:19] if record[1] else "N/A"  # Truncate timestamp
+                records_table.add_row(
+                    timestamp,
+                    str(record[2]),  # prompt_length
+                    f"{record[3]:.1f}",  # latency_ms
+                    str(record[4]),  # tokens_generated
+                    f"{record[5]:.1f}",  # tokens_per_second
+                    f"{record[6]:.1f}",  # memory_mb
+                    f"{record[8]:.2f}" if record[8] else "N/A"  # temperature
+                )
+            
+            console.print(records_table)
+        
+    except Exception as e:
+        console.print(f"❌ Error reading telemetry data: {e}", style="bold red")
+        console.print("Make sure the agent has been running and generating telemetry data.", style="yellow")
 
 if __name__ == "__main__":
     app()
