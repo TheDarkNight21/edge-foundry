@@ -268,6 +268,95 @@ def logs():
         console.print(f"❌ Error reading logs: {e}", style="bold red")
 
 @app.command()
+def clean(
+    force: bool = typer.Option(False, "--force", "-f", help="Force clean without confirmation"),
+    keep_models: bool = typer.Option(False, "--keep-models", help="Keep model files during clean"),
+    keep_config: bool = typer.Option(False, "--keep-config", help="Keep configuration files during clean")
+):
+    """Clean up temporary files, logs, and reset the working directory."""
+    if is_agent_running():
+        console.print("⚠️  Agent is currently running. Please stop it first with 'edgefoundry stop'.", style="bold yellow")
+        raise typer.Exit(1)
+    
+    # Show what will be cleaned
+    files_to_clean = []
+    dirs_to_clean = []
+    
+    if WORKING_DIR.exists():
+        for item in WORKING_DIR.iterdir():
+            if item.is_file():
+                if item.name == "agent.pid":
+                    files_to_clean.append(item)
+                elif item.name == "agent.log":
+                    files_to_clean.append(item)
+                elif item.name == "edgefoundry.yaml" and not keep_config:
+                    files_to_clean.append(item)
+            elif item.is_dir() and item.name == "models" and not keep_models:
+                dirs_to_clean.append(item)
+    
+    if not files_to_clean and not dirs_to_clean:
+        console.print("✨ Working directory is already clean!", style="bold green")
+        return
+    
+    # Show what will be cleaned
+    console.print("🧹 [bold blue]Cleanup Preview[/bold blue]")
+    console.print("The following items will be removed:")
+    
+    for file_path in files_to_clean:
+        console.print(f"  📄 {file_path}")
+    
+    for dir_path in dirs_to_clean:
+        console.print(f"  📁 {dir_path}")
+    
+    # Confirm unless forced
+    if not force:
+        if not typer.confirm("\nDo you want to proceed with the cleanup?"):
+            console.print("❌ Cleanup cancelled.", style="bold yellow")
+            return
+    
+    # Perform cleanup
+    cleaned_count = 0
+    
+    try:
+        # Remove files
+        for file_path in files_to_clean:
+            if file_path.exists():
+                file_path.unlink()
+                console.print(f"✅ Removed {file_path}")
+                cleaned_count += 1
+        
+        # Remove directories
+        for dir_path in dirs_to_clean:
+            if dir_path.exists():
+                shutil.rmtree(dir_path)
+                console.print(f"✅ Removed {dir_path}")
+                cleaned_count += 1
+        
+        # Clean up telemetry database if it exists
+        telemetry_db_path = Path("telemetry.db")
+        if telemetry_db_path.exists():
+            if force or typer.confirm(f"\nRemove telemetry database ({telemetry_db_path})?"):
+                telemetry_db_path.unlink()
+                console.print(f"✅ Removed {telemetry_db_path}")
+                cleaned_count += 1
+        
+        # Clean up __pycache__ directories
+        for pycache_dir in Path(".").rglob("__pycache__"):
+            if pycache_dir.is_dir():
+                shutil.rmtree(pycache_dir)
+                console.print(f"✅ Removed {pycache_dir}")
+                cleaned_count += 1
+        
+        if cleaned_count > 0:
+            console.print(f"\n🎉 Cleanup completed! Removed {cleaned_count} items.", style="bold green")
+        else:
+            console.print("\n✨ Nothing to clean!", style="bold green")
+            
+    except Exception as e:
+        console.print(f"❌ Error during cleanup: {e}", style="bold red")
+        raise typer.Exit(1)
+
+@app.command()
 def metrics(
     limit: int = typer.Option(20, "--limit", "-l", help="Number of recent records to show"),
     summary_only: bool = typer.Option(False, "--summary", "-s", help="Show only summary statistics")

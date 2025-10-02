@@ -1,5 +1,0 @@
-device: local
-host: 0.0.0.0
-model_path: ./models/tinyllama.gguf
-port: 8000
-runtime: llama_cpp
