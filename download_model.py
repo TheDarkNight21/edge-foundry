@@ -11,7 +11,8 @@ from pathlib import Path
 def download_model(repo_id: str, filename: str, output_dir: str = "models"):
     """Download a model from Hugging Face."""
     try:
-        from llama_cpp import Llama
+        from huggingface_hub import hf_hub_download
+        import shutil
         
         # Ensure output directory exists
         output_path = Path(output_dir)
@@ -20,30 +21,33 @@ def download_model(repo_id: str, filename: str, output_dir: str = "models"):
         print(f"📥 Downloading {filename} from {repo_id}...")
         print(f"📁 Output directory: {output_path.absolute()}")
         
-        # Download the model
-        llm = Llama.from_pretrained(
+        # Download the model file using huggingface_hub
+        print("📥 Downloading model file...")
+        downloaded_path = hf_hub_download(
             repo_id=repo_id,
             filename=filename,
-            n_ctx=2048,
-            n_gpu_layers=-1,
-            seed=1337,
+            cache_dir=None,  # Use default cache
+            local_dir=None,  # Don't extract to local dir yet
         )
         
+        # Copy the downloaded file to our output directory
+        print("📁 Moving model to output directory...")
         model_path = output_path / filename
+        shutil.copy2(downloaded_path, model_path)
+        
         if model_path.exists():
             size_mb = model_path.stat().st_size / (1024 * 1024)
             print(f"✅ Model downloaded successfully!")
             print(f"📊 File: {model_path}")
             print(f"📊 Size: {size_mb:.1f} MB")
+            return True
         else:
             print("❌ Model file not found after download")
             return False
             
-        return True
-        
     except ImportError:
-        print("❌ llama-cpp-python not installed.")
-        print("Install with: pip install llama-cpp-python")
+        print("❌ huggingface_hub not installed.")
+        print("Install with: pip install huggingface_hub")
         return False
     except Exception as e:
         print(f"❌ Error downloading model: {e}")

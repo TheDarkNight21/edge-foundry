@@ -291,19 +291,24 @@ def download(
     
     try:
         from llama_cpp import Llama
+        import shutil
+        from huggingface_hub import hf_hub_download
         
         console.print(f"🔄 Downloading from {repo_id}...", style="blue")
         
-        # Download the model using llama_cpp
-        llm = Llama.from_pretrained(
+        # Download the model file using huggingface_hub
+        console.print("📥 Downloading model file...", style="blue")
+        downloaded_path = hf_hub_download(
             repo_id=repo_id,
             filename=model_name,
-            n_ctx=2048,
-            n_gpu_layers=-1,
-            seed=1337,
+            cache_dir=None,  # Use default cache
+            local_dir=None,  # Don't extract to local dir yet
         )
         
-        # The model is automatically saved to the models directory
+        # Copy the downloaded file to our models directory
+        console.print("📁 Moving model to models directory...", style="blue")
+        shutil.copy2(downloaded_path, model_path)
+        
         console.print(f"✅ Model downloaded successfully to {model_path}", style="bold green")
         console.print(f"📊 Model size: {model_path.stat().st_size / (1024*1024):.1f} MB", style="green")
         
@@ -319,8 +324,10 @@ def download(
             
             console.print(f"✅ Updated configuration with new model path", style="green")
         
-    except ImportError:
-        console.print("❌ llama-cpp-python not installed. Install with: pip install llama-cpp-python", style="bold red")
+    except ImportError as e:
+        console.print("❌ Required packages not installed.", style="bold red")
+        console.print("Install with: pip install llama-cpp-python huggingface_hub", style="red")
+        console.print(f"Error: {e}", style="red")
         raise typer.Exit(1)
     except Exception as e:
         console.print(f"❌ Error downloading model: {e}", style="bold red")
