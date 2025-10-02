@@ -268,6 +268,65 @@ def logs():
         console.print(f"❌ Error reading logs: {e}", style="bold red")
 
 @app.command()
+def download(
+    model_name: str = typer.Option("tinyllama-1.1b-chat-v1.0.Q8_0.gguf", "--model", "-m", help="Model filename to download"),
+    repo_id: str = typer.Option("TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF", "--repo", "-r", help="Hugging Face repository ID"),
+    force: bool = typer.Option(False, "--force", "-f", help="Force download even if model exists")
+):
+    """Download a model from Hugging Face to the models directory."""
+    console.print(f"📥 Downloading model: {model_name}", style="bold blue")
+    
+    # Ensure models directory exists
+    models_dir = Path("models")
+    models_dir.mkdir(exist_ok=True)
+    
+    model_path = models_dir / model_name
+    
+    # Check if model already exists
+    if model_path.exists() and not force:
+        console.print(f"⚠️  Model already exists: {model_path}", style="bold yellow")
+        if not typer.confirm("Do you want to download anyway?"):
+            console.print("❌ Download cancelled.", style="bold yellow")
+            return
+    
+    try:
+        from llama_cpp import Llama
+        
+        console.print(f"🔄 Downloading from {repo_id}...", style="blue")
+        
+        # Download the model using llama_cpp
+        llm = Llama.from_pretrained(
+            repo_id=repo_id,
+            filename=model_name,
+            n_ctx=2048,
+            n_gpu_layers=-1,
+            seed=1337,
+        )
+        
+        # The model is automatically saved to the models directory
+        console.print(f"✅ Model downloaded successfully to {model_path}", style="bold green")
+        console.print(f"📊 Model size: {model_path.stat().st_size / (1024*1024):.1f} MB", style="green")
+        
+        # Update config if it exists
+        if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, 'r') as f:
+                config_data = yaml.safe_load(f)
+            
+            config_data["model_path"] = f"./models/{model_name}"
+            
+            with open(CONFIG_FILE, 'w') as f:
+                yaml.dump(config_data, f, default_flow_style=False)
+            
+            console.print(f"✅ Updated configuration with new model path", style="green")
+        
+    except ImportError:
+        console.print("❌ llama-cpp-python not installed. Install with: pip install llama-cpp-python", style="bold red")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ Error downloading model: {e}", style="bold red")
+        raise typer.Exit(1)
+
+@app.command()
 def clean(
     force: bool = typer.Option(False, "--force", "-f", help="Force clean without confirmation"),
     keep_models: bool = typer.Option(False, "--keep-models", help="Keep model files during clean"),
