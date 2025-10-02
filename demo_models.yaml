@@ -1,0 +1,59 @@
+# Demo Models Configuration
+# This file defines the available demo models for Edge Foundry
+
+demo_models:
+  tinyllama-1b-3bit:
+    name: "TinyLlama 1B (3-bit)"
+    description: "A compact 1B parameter model optimized for speed and efficiency"
+    model_path: "./models/tinyllama-1.1b-chat-v1.0.Q8_0.gguf"
+    runtime: "llama_cpp"
+    device: "local"
+    model_type: "gguf"
+    parameters: "1.1B"
+    quantization: "Q8_0"
+    context_length: 2048
+    sample_prompts:
+      - "What is the capital of France?"
+      - "Explain quantum computing in simple terms"
+      - "Write a short poem about artificial intelligence"
+      - "What are the benefits of renewable energy?"
+      - "How does machine learning work?"
+    config:
+      n_ctx: 2048
+      n_gpu_layers: -1
+      seed: 1337
+      temperature: 0.7
+      max_tokens: 64
+
+  phi-3-mini:
+    name: "Phi-3 Mini"
+    description: "Microsoft's efficient 3.8B parameter model for general purpose tasks"
+    model_path: "./models/phi-3-mini-4k-instruct.gguf"
+    runtime: "llama_cpp"
+    device: "local"
+    model_type: "gguf"
+    parameters: "3.8B"
+    quantization: "Q4_K_M"
+    context_length: 4096
+    sample_prompts:
+      - "Write a Python function to calculate fibonacci numbers"
+      - "Explain the concept of recursion in programming"
+      - "What are the main differences between SQL and NoSQL databases?"
+      - "Describe the process of photosynthesis"
+      - "How would you implement a binary search algorithm?"
+    config:
+      n_ctx: 4096
+      n_gpu_layers: -1
+      seed: 1337
+      temperature: 0.7
+      max_tokens: 128
+
+# Default model selection
+default_model: "tinyllama-1b-3bit"
+
+# Model switching configuration
+model_switching:
+  enabled: true
+  hot_swap: false  # Requires restart to switch models
+  cache_models: false  # Keep multiple models in memory
+

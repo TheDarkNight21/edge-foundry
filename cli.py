@@ -512,11 +512,176 @@ def metrics(
 
 
 @app.command()
+def demo_models():
+    """List available demo models and their status."""
+    try:
+        import requests
+        
+        # Check if agent is running
+        if not is_agent_running():
+            console.print("❌ Agent is not running. Start it first with: edgefoundry start", style="bold red")
+            raise typer.Exit(1)
+        
+        # Get demo models
+        url = "http://localhost:8000/demo-models"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            models = response.json()
+            
+            if not models:
+                console.print("📋 No demo models available", style="bold yellow")
+                return
+            
+            # Create models table
+            table = Table(title="Available Demo Models")
+            table.add_column("ID", style="cyan")
+            table.add_column("Name", style="green")
+            table.add_column("Parameters", style="yellow")
+            table.add_column("Quantization", style="blue")
+            table.add_column("Context", style="magenta")
+            
+            for model in models:
+                table.add_row(
+                    model["id"],
+                    model["name"],
+                    model["parameters"],
+                    model["quantization"],
+                    str(model["context_length"])
+                )
+            
+            console.print(table)
+            
+            # Show current model
+            try:
+                current_url = "http://localhost:8000/demo-models/current"
+                current_response = requests.get(current_url, timeout=10)
+                if current_response.status_code == 200:
+                    current = current_response.json()
+                    if current.get("loaded"):
+                        console.print(f"\n🎯 Current Model: {current.get('name', 'Unknown')}", style="bold green")
+                    else:
+                        console.print(f"\n⚠️  No model currently loaded", style="bold yellow")
+            except Exception as e:
+                console.print(f"⚠️  Could not get current model status: {e}", style="yellow")
+                
+        else:
+            console.print(f"❌ Error: {response.status_code} - {response.text}", style="bold red")
+            raise typer.Exit(1)
+            
+    except requests.exceptions.ConnectionError:
+        console.print("❌ Could not connect to agent", style="bold red")
+        console.print("Make sure the agent is running and accessible.", style="yellow")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ Error: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def switch_model(
+        model_id: str = typer.Argument(..., help="Model ID to switch to"),
+        host: str = typer.Option("localhost", "--host", "-h", help="Agent host address"),
+        port: int = typer.Option(8000, "--port", "-p", help="Agent port number")
+):
+    """Switch to a different demo model."""
+    try:
+        import requests
+        
+        # Check if agent is running
+        if not is_agent_running():
+            console.print("❌ Agent is not running. Start it first with: edgefoundry start", style="bold red")
+            raise typer.Exit(1)
+        
+        # Switch model
+        url = f"http://{host}:{port}/demo-models/switch"
+        data = {"model_id": model_id}
+        
+        console.print(f"🔄 Switching to model: {model_id}", style="bold blue")
+        
+        response = requests.post(url, json=data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            console.print(f"✅ {result['message']}", style="bold green")
+            
+            # Show model info
+            current = result.get("current_model", {})
+            if current:
+                console.print(f"📊 Model: {current.get('name', 'Unknown')}")
+                console.print(f"🔧 Runtime: {current.get('runtime', 'Unknown')}")
+                console.print(f"💾 Parameters: {current.get('parameters', 'Unknown')}")
+        else:
+            console.print(f"❌ Error: {response.status_code} - {response.text}", style="bold red")
+            raise typer.Exit(1)
+            
+    except requests.exceptions.ConnectionError:
+        console.print(f"❌ Could not connect to agent at {host}:{port}", style="bold red")
+        console.print("Make sure the agent is running and accessible.", style="yellow")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ Error: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def sample_prompts(
+        model_id: str = typer.Argument(..., help="Model ID to get sample prompts for"),
+        host: str = typer.Option("localhost", "--host", "-h", help="Agent host address"),
+        port: int = typer.Option(8000, "--port", "-p", help="Agent port number")
+):
+    """Get sample prompts for a specific demo model."""
+    try:
+        import requests
+        
+        # Check if agent is running
+        if not is_agent_running():
+            console.print("❌ Agent is not running. Start it first with: edgefoundry start", style="bold red")
+            raise typer.Exit(1)
+        
+        # Get sample prompts
+        url = f"http://{host}:{port}/demo-models/{model_id}/sample-prompts"
+        
+        console.print(f"📝 Getting sample prompts for: {model_id}", style="bold blue")
+        
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            prompts = result.get("sample_prompts", [])
+            
+            if not prompts:
+                console.print("📋 No sample prompts available for this model", style="bold yellow")
+                return
+            
+            console.print(f"\n🎯 Sample Prompts for {model_id}:", style="bold green")
+            console.print("-" * 50)
+            
+            for i, prompt in enumerate(prompts, 1):
+                console.print(f"{i}. {prompt}", style="cyan")
+            
+            console.print("-" * 50)
+            console.print(f"💡 Use these prompts with: edgefoundry inference \"<prompt>\" --model {model_id}", style="dim")
+        else:
+            console.print(f"❌ Error: {response.status_code} - {response.text}", style="bold red")
+            raise typer.Exit(1)
+            
+    except requests.exceptions.ConnectionError:
+        console.print(f"❌ Could not connect to agent at {host}:{port}", style="bold red")
+        console.print("Make sure the agent is running and accessible.", style="yellow")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ Error: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
+@app.command()
 def inference(
         prompt: str = typer.Argument(..., help="The prompt to send to the model"),
         max_tokens: int = typer.Option(64, "--max-tokens", "-t", help="Maximum number of tokens to generate"),
         temperature: float = typer.Option(0.7, "--temperature", "-temp",
                                           help="Temperature for text generation (0.0 to 1.0)"),
+        model_id: str = typer.Option(None, "--model", "-m", help="Model ID to use for inference"),
         host: str = typer.Option("localhost", "--host", "-h", help="Agent host address"),
         port: int = typer.Option(8000, "--port", "-p", help="Agent port number")
 ):
@@ -535,6 +700,10 @@ def inference(
         "max_tokens": max_tokens,
         "temperature": temperature
     }
+    
+    # Add model_id if specified
+    if model_id:
+        data["model_id"] = model_id
 
     console.print(f"🤖 Running inference...", style="bold blue")
     console.print(f"📝 Prompt: {prompt}", style="cyan")

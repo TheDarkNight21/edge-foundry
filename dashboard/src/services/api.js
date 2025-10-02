@@ -60,15 +60,38 @@ class ApiService {
   }
 
   // Inference
-  async runInference(prompt, maxTokens = 64, temperature = 0.7) {
+  async runInference(prompt, maxTokens = 64, temperature = 0.7, modelId = null) {
     return this.request('/inference', {
       method: 'POST',
       body: JSON.stringify({
         prompt,
         max_tokens: maxTokens,
         temperature,
+        model_id: modelId,
       }),
     });
+  }
+
+  // Demo models
+  async getDemoModels() {
+    return this.request('/demo-models');
+  }
+
+  async getSamplePrompts(modelId) {
+    return this.request(`/demo-models/${modelId}/sample-prompts`);
+  }
+
+  async switchModel(modelId) {
+    return this.request('/demo-models/switch', {
+      method: 'POST',
+      body: JSON.stringify({
+        model_id: modelId,
+      }),
+    });
+  }
+
+  async getCurrentModel() {
+    return this.request('/demo-models/current');
   }
 
   // Root endpoint

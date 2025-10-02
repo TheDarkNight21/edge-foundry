@@ -4,6 +4,7 @@ import { AppProvider } from './context/AppContext';
 import Header from './components/Header';
 import MetricsOverview from './components/MetricsOverview';
 import ModelInfo from './components/ModelInfo';
+import DemoModels from './components/DemoModels';
 import InferencePanel from './components/InferencePanel';
 import RecentInferences from './components/RecentInferences';
 import PerformanceCharts from './components/PerformanceCharts';
@@ -32,6 +33,11 @@ function App() {
             {/* System Status */}
             <SystemStatus />
             
+            {/* Demo Models Section */}
+            <div className="mb-8">
+              <DemoModels />
+            </div>
+
             {/* Main Dashboard Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* Left Column - Metrics and Recent Inferences */}
