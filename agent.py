@@ -10,6 +10,7 @@ import logging
 import yaml
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from llama_cpp import Llama
 from telemetry import telemetry_db, get_memory_usage, count_tokens
@@ -48,6 +49,15 @@ app = FastAPI(
     title="Edge Foundry Agent",
     description="Local TinyLlama model inference API",
     version="1.0.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Global model instance

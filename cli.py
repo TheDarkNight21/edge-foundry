@@ -511,5 +511,79 @@ def metrics(
         console.print("Make sure the agent has been running and generating telemetry data.", style="yellow")
 
 
+@app.command()
+def inference(
+        prompt: str = typer.Argument(..., help="The prompt to send to the model"),
+        max_tokens: int = typer.Option(64, "--max-tokens", "-t", help="Maximum number of tokens to generate"),
+        temperature: float = typer.Option(0.7, "--temperature", "-temp",
+                                          help="Temperature for text generation (0.0 to 1.0)"),
+        host: str = typer.Option("localhost", "--host", "-h", help="Agent host address"),
+        port: int = typer.Option(8000, "--port", "-p", help="Agent port number")
+):
+    """Run inference using the deployed model."""
+    import requests
+
+    # Check if agent is running
+    if not is_agent_running():
+        console.print("❌ Agent is not running. Start it first with: python cli.py start", style="bold red")
+        raise typer.Exit(1)
+
+    # Prepare the request
+    url = f"http://{host}:{port}/inference"
+    data = {
+        "prompt": prompt,
+        "max_tokens": max_tokens,
+        "temperature": temperature
+    }
+
+    console.print(f"🤖 Running inference...", style="bold blue")
+    console.print(f"📝 Prompt: {prompt}", style="cyan")
+    console.print(f"⚙️  Max tokens: {max_tokens}, Temperature: {temperature}", style="dim")
+
+    try:
+        # Make the request
+        response = requests.post(url, json=data, timeout=60)
+
+        if response.status_code == 200:
+            result = response.json()
+
+            # Display the result
+            console.print("\n" + "=" * 60, style="bold blue")
+            console.print("🎯 INFERENCE RESULT", style="bold green")
+            console.print("=" * 60, style="bold blue")
+
+            if "response" in result:
+                console.print(f"📤 Response: {result['response']}", style="green")
+
+            if "tokens_generated" in result:
+                console.print(f"🔢 Tokens generated: {result['tokens_generated']}", style="cyan")
+
+            if "latency_ms" in result:
+                console.print(f"⏱️  Latency: {result['latency_ms']:.2f}ms", style="cyan")
+
+            if "tokens_per_second" in result:
+                console.print(f"🚀 Speed: {result['tokens_per_second']:.2f} tokens/sec", style="cyan")
+
+            if "memory_mb" in result:
+                console.print(f"💾 Memory used: {result['memory_mb']:.2f}MB", style="cyan")
+
+            console.print("=" * 60, style="bold blue")
+
+        else:
+            console.print(f"❌ Error: {response.status_code} - {response.text}", style="bold red")
+            raise typer.Exit(1)
+
+    except requests.exceptions.ConnectionError:
+        console.print(f"❌ Could not connect to agent at {host}:{port}", style="bold red")
+        console.print("Make sure the agent is running and accessible.", style="yellow")
+        raise typer.Exit(1)
+    except requests.exceptions.Timeout:
+        console.print("❌ Request timed out. The model might be taking too long to respond.", style="bold red")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ Unexpected error: {e}", style="bold red")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()
