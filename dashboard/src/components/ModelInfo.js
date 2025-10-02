@@ -1,129 +1,107 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { Card, CardContent, Typography, Box, Chip } from '@mui/material';
 import { 
-  Cpu, 
-  HardDrive, 
+  Storage, 
+  Settings, 
+  Computer, 
   CheckCircle, 
-  XCircle,
-  Settings,
-  FileText
-} from 'lucide-react';
+  Error 
+} from '@mui/icons-material';
+import { useApp } from '../context/AppContext';
 
-function ModelInfo() {
-  const { modelInfo, health, isLoading } = useApp();
-
-  if (isLoading && !modelInfo) {
+const ModelInfo = () => {
+  const { modelInfo: modelData, isLoading: loading, error } = useApp();
+  if (loading) {
     return (
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Model Information
-        </h2>
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 dark:bg-gray-700 rounded h-4 w-3/4"></div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <Typography variant="h6">Model Information</Typography>
+          <Typography>Loading model info...</Typography>
+        </CardContent>
+      </Card>
     );
   }
 
-  if (!modelInfo) {
+  if (error) {
     return (
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Model Information
-        </h2>
-        <div className="text-center py-4">
-          <XCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            No model information available
-          </p>
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" color="error">Model Information</Typography>
+          <Typography color="error">Error: {error}</Typography>
+        </CardContent>
+      </Card>
     );
   }
 
-  const isModelLoaded = health?.model_loaded || false;
+  const getStatusIcon = (loaded) => {
+    return loaded ? <CheckCircle color="success" /> : <Error color="error" />;
+  };
+
+  const getStatusColor = (loaded) => {
+    return loaded ? 'success' : 'error';
+  };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
           Model Information
-        </h2>
-        <div className={`status-indicator ${
-          isModelLoaded ? 'status-healthy' : 'status-error'
-        }`}>
-          {isModelLoaded ? (
-            <CheckCircle className="w-3 h-3 mr-1" />
-          ) : (
-            <XCircle className="w-3 h-3 mr-1" />
-          )}
-          {isModelLoaded ? 'Loaded' : 'Not Loaded'}
-        </div>
-      </div>
+        </Typography>
 
-      <div className="space-y-4">
-        {/* Model Path */}
-        <div className="flex items-start space-x-3">
-          <FileText className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Model Path
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 break-all">
-              {modelInfo.model_path || 'Unknown'}
-            </p>
-          </div>
-        </div>
+        <Box display="flex" alignItems="center" gap={2} mb={2}>
+          <Typography variant="subtitle1">Status:</Typography>
+          {getStatusIcon(modelData?.model_loaded)}
+          <Chip
+            label={modelData?.model_loaded ? 'Loaded' : 'Not Loaded'}
+            color={getStatusColor(modelData?.model_loaded)}
+            size="small"
+          />
+        </Box>
 
-        {/* Runtime */}
-        <div className="flex items-center space-x-3">
-          <Cpu className="w-5 h-5 text-gray-400 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Runtime
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {modelInfo.runtime || 'Unknown'}
-            </p>
-          </div>
-        </div>
+        <Box display="flex" flexDirection="column" gap={1}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Storage fontSize="small" color="action" />
+            <Typography variant="body2">
+              <strong>Model Path:</strong> {modelData?.model_path || 'Unknown'}
+            </Typography>
+          </Box>
 
-        {/* Device */}
-        <div className="flex items-center space-x-3">
-          <HardDrive className="w-5 h-5 text-gray-400 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              Device
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {modelInfo.device || 'Unknown'}
-            </p>
-          </div>
-        </div>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Settings fontSize="small" color="action" />
+            <Typography variant="body2">
+              <strong>Runtime:</strong> {modelData?.runtime || 'Unknown'}
+            </Typography>
+          </Box>
 
-        {/* Configuration */}
-        {modelInfo.config && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2 mb-2">
-              <Settings className="w-4 h-4 text-gray-400" />
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                Configuration
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-              <pre className="text-xs text-gray-600 dark:text-gray-400 overflow-x-auto">
-                {JSON.stringify(modelInfo.config, null, 2)}
-              </pre>
-            </div>
-          </div>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Computer fontSize="small" color="action" />
+            <Typography variant="body2">
+              <strong>Device:</strong> {modelData?.device || 'Unknown'}
+            </Typography>
+          </Box>
+        </Box>
+
+        {modelData?.config && (
+          <Box mt={2}>
+            <Typography variant="subtitle2" gutterBottom>
+              Configuration Details:
+            </Typography>
+            <Box
+              sx={{
+                p: 1,
+                bgcolor: 'grey.100',
+                borderRadius: 1,
+                fontFamily: 'monospace',
+                fontSize: '0.875rem'
+              }}
+            >
+              <pre>{JSON.stringify(modelData.config, null, 2)}</pre>
+            </Box>
+          </Box>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
-}
+};
 
 export default ModelInfo;

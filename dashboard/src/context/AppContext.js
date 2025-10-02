@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -65,6 +65,7 @@ function appReducer(state, action) {
       return { ...state, modelInfo: action.payload };
     
     case ActionTypes.SET_METRICS:
+      console.log('Reducer: Setting metrics to:', action.payload);
       return { ...state, metrics: action.payload };
     
     case ActionTypes.SET_RECENT_INFERENCES:
@@ -140,9 +141,13 @@ export function AppProvider({ children }) {
   const fetchMetrics = async () => {
     try {
       const metrics = await apiService.getMetrics();
+      console.log('AppContext: Setting metrics:', metrics);
+      console.log('AppContext: Metrics summary:', metrics?.summary);
+      console.log('AppContext: Metrics recent_records:', metrics?.recent_records);
       dispatch({ type: ActionTypes.SET_METRICS, payload: metrics });
       
       if (metrics.recent_records) {
+        console.log('AppContext: Setting recent inferences:', metrics.recent_records);
         dispatch({ type: ActionTypes.SET_RECENT_INFERENCES, payload: metrics.recent_records });
       }
     } catch (error) {
@@ -150,7 +155,7 @@ export function AppProvider({ children }) {
     }
   };
 
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     dispatch({ type: ActionTypes.SET_LOADING, payload: true });
     try {
       await Promise.all([
@@ -158,10 +163,12 @@ export function AppProvider({ children }) {
         fetchModelInfo(),
         fetchMetrics(),
       ]);
+    } catch (error) {
+      console.error('Failed to fetch all data:', error);
     } finally {
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
     }
-  };
+  }, []);
 
   const runInference = async (prompt, maxTokens, temperature) => {
     dispatch({ type: ActionTypes.SET_RUNNING_INFERENCE, payload: true });
@@ -189,12 +196,12 @@ export function AppProvider({ children }) {
     }, state.refreshInterval);
 
     return () => clearInterval(interval);
-  }, [state.autoRefresh, state.refreshInterval]);
+  }, [state.autoRefresh, state.refreshInterval, fetchAllData]);
 
   // Initial data fetch
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [fetchAllData]);
 
   // Context value
   const value = {

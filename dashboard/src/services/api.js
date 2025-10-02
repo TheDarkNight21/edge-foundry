@@ -1,140 +1,118 @@
-import axios from 'axios';
+import config from '../config';
 
-// Create axios instance with base configuration
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor for logging
-api.interceptors.request.use(
-  (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    return config;
-  },
-  (error) => {
-    console.error('API Request Error:', error);
-    return Promise.reject(error);
+class ApiService {
+  constructor() {
+    this.baseURL = config.API_BASE_URL;
   }
-);
 
-// Response interceptor for error handling
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    console.error('API Response Error:', error);
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
     
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout - please try again');
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', // Bypass ngrok warning page
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response received:', text.substring(0, 200));
+        throw new Error('Server returned non-JSON response');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
-    
-    if (error.response?.status === 500) {
-      throw new Error('Server error - please check the agent logs');
-    }
-    
-    if (error.response?.status === 404) {
-      throw new Error('API endpoint not found - please check the agent is running');
-    }
-    
-    if (!error.response) {
-      throw new Error('Network error - please check the agent is running and accessible');
-    }
-    
-    throw error;
   }
-);
 
-// API service functions
-export const apiService = {
-  // Health and status endpoints
+  // Health check
   async getHealth() {
-    const response = await api.get('/health');
-    return response.data;
-  },
+    return this.request('/health');
+  }
 
-  async getRoot() {
-    const response = await api.get('/');
-    return response.data;
-  },
-
-  // Model information
+  // Model info
   async getModelInfo() {
-    const response = await api.get('/model-info');
-    return response.data;
-  },
+    return this.request('/model-info');
+  }
 
-  // Metrics and telemetry
+  // Metrics
   async getMetrics() {
-    const response = await api.get('/metrics');
-    return response.data;
-  },
+    const result = await this.request('/metrics');
+    console.log('Metrics data received:', result);
+    console.log('Summary:', result.summary);
+    console.log('Recent records:', result.recent_records);
+    if (result.recent_records && result.recent_records.length > 0) {
+      console.log('First record:', result.recent_records[0]);
+    }
+    return result;
+  }
 
   // Inference
   async runInference(prompt, maxTokens = 64, temperature = 0.7) {
-    const response = await api.post('/inference', {
-      prompt,
-      max_tokens: maxTokens,
-      temperature,
+    return this.request('/inference', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt,
+        max_tokens: maxTokens,
+        temperature,
+      }),
     });
-    return response.data;
-  },
-};
+  }
 
-// Utility functions for data transformation
+  // Root endpoint
+  async getRoot() {
+    return this.request('/');
+  }
+}
+
+// Data utilities
 export const dataUtils = {
   formatTimestamp(timestamp) {
     if (!timestamp) return 'N/A';
     return new Date(timestamp).toLocaleString();
   },
 
-  formatLatency(latencyMs) {
-    if (latencyMs < 1000) {
-      return `${latencyMs.toFixed(1)}ms`;
-    }
-    return `${(latencyMs / 1000).toFixed(2)}s`;
-  },
-
-  formatMemory(memoryMB) {
-    if (memoryMB < 1024) {
-      return `${memoryMB.toFixed(1)} MB`;
-    }
-    return `${(memoryMB / 1024).toFixed(2)} GB`;
+  formatLatency(latency) {
+    if (latency === null || latency === undefined) return 'N/A';
+    const numLatency = Number(latency);
+    if (isNaN(numLatency)) return 'N/A';
+    return `${numLatency.toFixed(1)}ms`;
   },
 
   formatTokensPerSecond(tokensPerSecond) {
-    return `${tokensPerSecond.toFixed(1)} tokens/sec`;
+    if (tokensPerSecond === null || tokensPerSecond === undefined) return 'N/A';
+    const numTokens = Number(tokensPerSecond);
+    if (isNaN(numTokens)) return 'N/A';
+    return `${numTokens.toFixed(1)}`;
   },
 
-  getStatusColor(status) {
-    switch (status) {
-      case 'healthy':
-        return 'text-green-600 dark:text-green-400';
-      case 'error':
-        return 'text-red-600 dark:text-red-400';
-      case 'warning':
-        return 'text-yellow-600 dark:text-yellow-400';
-      default:
-        return 'text-gray-600 dark:text-gray-400';
-    }
+  formatMemory(memory) {
+    if (memory === null || memory === undefined) return 'N/A';
+    const numMemory = Number(memory);
+    if (isNaN(numMemory)) return 'N/A';
+    return `${numMemory.toFixed(1)}MB`;
   },
 
-  getStatusIcon(status) {
-    switch (status) {
-      case 'healthy':
-        return '✓';
-      case 'error':
-        return '✗';
-      case 'warning':
-        return '⚠';
-      default:
-        return '?';
-    }
-  },
+  formatTemperature(temperature) {
+    if (temperature === null || temperature === undefined) return 'N/A';
+    const numTemp = Number(temperature);
+    if (isNaN(numTemp)) return 'N/A';
+    return numTemp.toFixed(2);
+  }
 };
 
-export default api;
+// Export both named and default exports
+export const apiService = new ApiService();
+export default apiService;
