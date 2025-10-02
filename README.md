@@ -1,110 +1,78 @@
-# Edge Foundry
+# EdgeFoundry
 
-A local AI agent management CLI for running TinyLlama models with FastAPI.
+> 🚀 **Deploy, monitor, and manage local AI models with one CLI.** A complete DevOps platform for running TinyLlama, Phi-3 Mini, and other GGUF models locally with real-time observability.
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.2+-blue.svg)](https://reactjs.org/)
 
-- 🚀 **Easy CLI Management**: Simple commands to deploy, start, stop, and monitor your AI agent
-- 🤖 **Local Model Support**: Run TinyLlama models locally with llama-cpp-python
-- 🌐 **FastAPI Integration**: RESTful API for model inference
-- 📊 **Process Monitoring**: Built-in status monitoring and logging
-- ⚙️ **Configuration Management**: YAML-based configuration system
+## Why EdgeFoundry?
 
-## Installation
+**EdgeFoundry** solves the complexity of deploying and monitoring local AI models. Instead of wrestling with model loading, API setup, and monitoring tools, you get a complete platform that handles everything from model deployment to real-time performance tracking.
 
-1. Install dependencies:
+### Key Features
+
+- 🎯 **One-Command Deployment** - Deploy any GGUF model with a single CLI command
+- 📊 **Real-Time Dashboard** - Beautiful React UI with live metrics, performance charts, and model switching
+- 🔄 **Multi-Model Support** - Switch between TinyLlama, Phi-3 Mini, and custom models on-the-fly
+- 📈 **Advanced Telemetry** - Track latency, tokens/sec, memory usage, and performance trends
+- 🛠️ **Production Ready** - FastAPI backend with CORS, health checks, and process management
+- 💾 **Local-First** - Everything runs locally with SQLite storage - no cloud dependencies
+- 🎨 **Modern UI** - Responsive dashboard with dark mode, real-time updates, and intuitive controls
+
+## Quick Start (5 Minutes)
+
+### 1. Install EdgeFoundry
 ```bash
+git clone https://github.com/yourusername/edge-foundry.git
+cd edge-foundry
 pip install -r requirements.txt
 ```
 
-2. Install the CLI (optional):
+### 2. Initialize & Deploy
 ```bash
-pip install -e .
-```
-
-## Quick Start
-
-### 1. Initialize Edge Foundry
-```bash
+# Initialize EdgeFoundry
 python cli.py init
+
+# Download a demo model (TinyLlama 1B)
+python download_demo_models.py --model tinyllama-1b-3bit
+
+# Deploy the model
+python cli.py deploy --model ./models/tinyllama-1.1b-chat-v1.0.Q8_0.gguf
 ```
 
-### 2. Deploy a Model
+### 3. Start & Monitor
 ```bash
-python cli.py deploy --model path/to/your/model.gguf
-```
-
-### 3. Start the Agent
-```bash
+# Start the agent
 python cli.py start
+
+# Launch the dashboard
+cd dashboard && npm install && npm start
 ```
 
-### 4. Check Status
+### 4. Test Your Setup
 ```bash
-python cli.py status
+# Test via CLI
+python cli.py inference "Hello, how are you?"
+
+# Test via API
+curl -X POST "http://localhost:8000/inference" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "What is the capital of France?", "max_tokens": 64}'
 ```
 
-### 5. Test the API
-```bash
-# PowerShell
-Invoke-RestMethod -Uri "http://localhost:8000/inference" -Method POST -ContentType "application/json" -Body '{"prompt": "Hello, how are you?"}'
+**🎉 Done!** Visit `http://localhost:3000` to see your dashboard.
 
-# Bash/Linux
-curl -X POST "http://localhost:8000/inference" -H "Content-Type: application/json" -d '{"prompt": "Hello, how are you?"}'
-```
+## Example Output
 
-## CLI Commands
-
-### `edgefoundry init`
-Initialize Edge Foundry in the current directory. Creates the working directory structure and default configuration.
-
-### `edgefoundry deploy --model MODEL_PATH`
-Deploy a model file to the working directory. Copies the model and updates the configuration.
-
-**Options:**
-- `--model`: Path to the model file (.gguf format)
-- `--config`: Optional path to custom config file
-
-### `edgefoundry start`
-Start the Edge Foundry agent in the background. The agent will load the model and start the FastAPI server.
-
-### `edgefoundry stop`
-Stop the running Edge Foundry agent.
-
-### `edgefoundry status`
-Show the current status of the agent including:
-- Running status
-- Process ID
-- Uptime
-- Memory usage
-- CPU usage
-- API URL
-- Recent logs
-
-### `edgefoundry logs`
-Display recent agent logs.
-
-## API Endpoints
-
-### POST `/inference`
-Run inference on the loaded model.
-
-**Request Body:**
+### CLI Response
 ```json
 {
-  "prompt": "Your prompt here",
-  "max_tokens": 64,
-  "temperature": 0.7
-}
-```
-
-**Response:**
-```json
-{
-  "response": "Model response text",
+  "response": "The capital of France is Paris. Paris is the largest city in France and serves as the country's political, economic, and cultural center.",
   "processing_time": 1.23,
   "model_info": {
-    "model_path": "./models/tinyllama.gguf",
+    "model_path": "./models/tinyllama-1.1b-chat-v1.0.Q8_0.gguf",
     "runtime": "llama_cpp",
     "device": "local",
     "max_tokens": 64,
@@ -113,79 +81,161 @@ Run inference on the loaded model.
 }
 ```
 
-### GET `/health`
-Health check endpoint.
+### Dashboard Screenshots
+*[Placeholder for dashboard screenshots showing:*
+- *Real-time metrics overview*
+- *Model switching interface*
+- *Performance charts*
+- *Recent inferences table]*
 
-### GET `/`
-Basic status endpoint.
+## Architecture
+
+```
+EdgeFoundry/
+├── 🎛️  CLI Interface (cli.py)          # Command-line management
+├── 🚀  FastAPI Agent (agent.py)        # Model inference server
+├── 📊  React Dashboard (dashboard/)     # Real-time monitoring UI
+├── 📈  Telemetry System (telemetry.py) # Performance tracking
+├── 🤖  Model Manager (model_manager.py) # Multi-model support
+└── 📁  Models Directory (models/)       # Local model storage
+```
+
+## Supported Models
+
+| Model | Parameters | Quantization | Context | Use Case |
+|-------|------------|--------------|---------|----------|
+| **TinyLlama 1B** | 1.1B | Q8_0 | 2K | Fast responses, low memory |
+| **Phi-3 Mini** | 3.8B | Q4_K_M | 4K | Balanced performance |
+| **Custom GGUF** | Any | Any | Any | Your models |
+
+## CLI Commands
+
+```bash
+# Management
+python cli.py init                    # Initialize EdgeFoundry
+python cli.py deploy --model PATH     # Deploy a model
+python cli.py start                   # Start the agent
+python cli.py stop                    # Stop the agent
+python cli.py status                  # Check status
+
+# Model Operations
+python cli.py demo-models             # List available models
+python cli.py switch-model MODEL_ID   # Switch active model
+python cli.py inference "PROMPT"      # Run inference
+
+# Monitoring
+python cli.py metrics                 # View performance metrics
+python cli.py logs                    # View agent logs
+```
+
+## API Endpoints
+
+### Core Endpoints
+- `POST /inference` - Run model inference
+- `GET /health` - Health check
+- `GET /demo-models` - List available models
+- `POST /demo-models/switch` - Switch active model
+
+### Example API Usage
+```python
+import requests
+
+# Run inference
+response = requests.post('http://localhost:8000/inference', json={
+    'prompt': 'Explain quantum computing',
+    'max_tokens': 128,
+    'temperature': 0.7
+})
+
+print(response.json()['response'])
+```
 
 ## Configuration
 
-The configuration is stored in `.edgefoundry/edgefoundry.yaml`:
+EdgeFoundry uses YAML configuration stored in `.edgefoundry/edgefoundry.yaml`:
 
 ```yaml
-model_path: ./models/tinyllama.gguf
+model_path: ./models/tinyllama-1.1b-chat-v1.0.Q8_0.gguf
 runtime: llama_cpp
 device: local
 port: 8000
 host: 0.0.0.0
-```
-
-## File Structure
-
-```
-.
-├── agent.py              # FastAPI application
-├── cli.py                # CLI interface
-├── load_model.py         # Model loading utilities
-├── run_model.py          # CLI model runner
-├── requirements.txt      # Python dependencies
-├── setup.py             # Package setup
-├── edgefoundry.yaml     # Default configuration
-└── .edgefoundry/        # Working directory
-    ├── edgefoundry.yaml # Active configuration
-    ├── models/          # Deployed models
-    ├── agent.pid        # Process ID file
-    └── agent.log        # Agent logs
+n_ctx: 2048
+n_gpu_layers: -1
+temperature: 0.7
+max_tokens: 64
 ```
 
 ## Development
 
+### Prerequisites
+- Python 3.8+
+- Node.js 16+ (for dashboard)
+- macOS (for Metal GPU acceleration) or Linux
+
+### Setup Development Environment
+```bash
+# Backend
+pip install -r requirements.txt
+pip install -e .
+
+# Frontend
+cd dashboard
+npm install
+npm start
+```
+
 ### Running Tests
 ```bash
 python test_cli.py
+python test_telemetry.py
+python test_demo_models.py
 ```
 
-### Manual Testing
-```bash
-# Start the agent manually
-uvicorn agent:app --host 0.0.0.0 --port 8000
+## Roadmap
 
-# Test with curl
-curl -X POST "http://localhost:8000/inference" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "What is the capital of France?"}'
-```
+### 🎯 Next Steps
+- [ ] **ONNX Runtime Support** - Add support for ONNX models
+- [ ] **Docker Support** - Containerized deployment options
+- [ ] **Model Comparison** - A/B testing between models
+- [ ] **Custom Metrics** - User-defined performance metrics
+- [ ] **REST API Extensions** - Batch inference, streaming responses
 
-## Requirements
+### 🚀 Future Features
+- [ ] **Cloud Sync** - Optional cloud model storage
+- [ ] **Model Marketplace** - Community model sharing
+- [ ] **Advanced Analytics** - ML-powered performance insights
+- [ ] **Multi-User Support** - Team collaboration features
 
-- Python 3.8+
-- macOS (for Metal GPU acceleration)
-- Sufficient RAM for model loading
+## Contributing
 
-## Troubleshooting
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Agent Won't Start
-- Check if port 8000 is available
-- Verify model file exists and is valid
-- Check logs: `edgefoundry logs`
+### Quick Contribution
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Model Loading Issues
-- Ensure model file is in GGUF format
-- Check available memory
-- Verify model path in configuration
+## Community & Feedback
 
-### API Connection Issues
-- Confirm agent is running: `edgefoundry status`
-- Check firewall settings
-- Verify correct port (default: 8000)
+- 🐛 **Found a bug?** [Open an issue](https://github.com/yourusername/edge-foundry/issues)
+- 💡 **Have an idea?** [Request a feature](https://github.com/yourusername/edge-foundry/issues)
+- 💬 **Questions?** [Start a discussion](https://github.com/yourusername/edge-foundry/discussions)
+- ⭐ **Like the project?** Give us a star!
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [llama.cpp](https://github.com/ggerganov/llama.cpp) for efficient model inference
+- [FastAPI](https://fastapi.tiangolo.com/) for the robust API framework
+- [React](https://reactjs.org/) for the beautiful dashboard
+- [TinyLlama](https://huggingface.co/TinyLlama) and [Phi-3](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) for the demo models
+
+---
+
+**Made with ❤️ for the AI community**

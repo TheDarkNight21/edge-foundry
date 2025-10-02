@@ -1,68 +1,101 @@
 #!/usr/bin/env python3
 """
-Edge Foundry Setup Script
-Handles complete setup including model download and initialization.
+EdgeFoundry Package Setup
+Modern Python packaging configuration for EdgeFoundry.
 """
 
-import subprocess
-import sys
+from setuptools import setup, find_packages
 from pathlib import Path
 
-def run_command(cmd, description):
-    """Run a command and handle errors."""
-    print(f"🔄 {description}...")
-    try:
-        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
-        print(f"✅ {description} completed")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"❌ {description} failed: {e}")
-        if e.stdout:
-            print(f"STDOUT: {e.stdout}")
-        if e.stderr:
-            print(f"STDERR: {e.stderr}")
-        return False
+# Read the README file
+readme_path = Path(__file__).parent / "README.md"
+long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
 
-def main():
-    """Main setup function."""
-    print("🚀 Edge Foundry Setup")
-    print("=" * 50)
-    
-    # Check if we're in the right directory
-    if not Path("cli.py").exists():
-        print("❌ Please run this script from the Edge Foundry root directory")
-        sys.exit(1)
-    
-    # Step 1: Install dependencies
-    if not run_command("pip install -r requirements.txt", "Installing dependencies"):
-        print("❌ Failed to install dependencies")
-        sys.exit(1)
-    
-    # Step 2: Download model
-    if not run_command("python cli.py download", "Downloading model"):
-        print("❌ Failed to download model")
-        sys.exit(1)
-    
-    # Step 3: Initialize Edge Foundry
-    if not run_command("python cli.py init", "Initializing Edge Foundry"):
-        print("❌ Failed to initialize Edge Foundry")
-        sys.exit(1)
-    
-    # Step 4: Deploy model
-    if not run_command("python cli.py deploy --model models/tinyllama-1.1b-chat-v1.0.Q8_0.gguf", "Deploying model"):
-        print("❌ Failed to deploy model")
-        sys.exit(1)
-    
-    print("\n" + "=" * 50)
-    print("🎉 Setup Complete!")
-    print("=" * 50)
-    print("✅ Dependencies installed")
-    print("✅ Model downloaded")
-    print("✅ Edge Foundry initialized")
-    print("✅ Model deployed")
-    print("\n🚀 Ready to start the agent!")
-    print("Run: python cli.py start")
-    print("Then test: python cli.py status")
+# Read requirements
+requirements_path = Path(__file__).parent / "requirements.txt"
+requirements = []
+if requirements_path.exists():
+    with open(requirements_path, "r", encoding="utf-8") as f:
+        requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-if __name__ == "__main__":
-    main()
+setup(
+    name="edge-foundry",
+    version="1.0.0",
+    description="Deploy, monitor, and manage local AI models with one CLI",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    author="EdgeFoundry Team",
+    author_email="team@edgefoundry.dev",
+    url="https://github.com/yourusername/edge-foundry",
+    project_urls={
+        "Homepage": "https://github.com/yourusername/edge-foundry",
+        "Documentation": "https://github.com/yourusername/edge-foundry#readme",
+        "Repository": "https://github.com/yourusername/edge-foundry.git",
+        "Issues": "https://github.com/yourusername/edge-foundry/issues",
+        "Changelog": "https://github.com/yourusername/edge-foundry/blob/main/CHANGELOG.md",
+    },
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+    py_modules=[
+        "agent",
+        "cli", 
+        "model_manager",
+        "telemetry",
+        "load_model",
+        "run_model",
+    ],
+    entry_points={
+        "console_scripts": [
+            "edgefoundry=cli:main",
+        ],
+    },
+    python_requires=">=3.8",
+    install_requires=requirements,
+    extras_require={
+        "dev": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "black>=23.0.0",
+            "isort>=5.12.0",
+            "flake8>=6.0.0",
+            "mypy>=1.0.0",
+            "pre-commit>=3.0.0",
+        ],
+        "test": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0",
+            "httpx>=0.24.0",
+        ],
+    },
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: System :: Monitoring",
+        "Topic :: System :: Systems Administration",
+    ],
+    keywords=[
+        "ai",
+        "llm", 
+        "local",
+        "deployment",
+        "monitoring",
+        "cli",
+        "fastapi",
+        "llama",
+        "gguf",
+    ],
+    include_package_data=True,
+    zip_safe=False,
+)
