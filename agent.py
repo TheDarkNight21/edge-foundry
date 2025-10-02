@@ -18,12 +18,13 @@ from telemetry import telemetry_db, get_memory_usage, count_tokens
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Load configuration
 def load_config() -> Dict[str, Any]:
     """Load configuration from edgefoundry.yaml"""
     # Try working directory first, then current directory
     config_paths = ["./.edgefoundry/edgefoundry.yaml", "edgefoundry.yaml"]
-    
+
     for config_path in config_paths:
         if os.path.exists(config_path):
             try:
@@ -34,9 +35,10 @@ def load_config() -> Dict[str, Any]:
             except yaml.YAMLError as e:
                 logger.error(f"Error parsing configuration file {config_path}: {e}")
                 continue
-    
+
     logger.error("Configuration file edgefoundry.yaml not found in any expected location")
     raise FileNotFoundError("Configuration file not found")
+
 
 # Load configuration
 config = load_config()
@@ -51,15 +53,18 @@ app = FastAPI(
 # Global model instance
 model = None
 
+
 class InferenceRequest(BaseModel):
     prompt: str
     max_tokens: int = 64
     temperature: float = 0.7
 
+
 class InferenceResponse(BaseModel):
     response: str
     processing_time: float
     model_info: Dict[str, Any]
+
 
 def load_model():
     """Load the model based on configuration"""
@@ -67,18 +72,18 @@ def load_model():
     if model is None:
         logger.info("Loading model...")
         start_time = time.time()
-        
+
         # Get model path from config
         model_path = config.get("model_path", "./models/tinyllama.gguf")
-        
+
         # If it's a relative path, try working directory first
         if not os.path.isabs(model_path):
             working_model_path = f"./.edgefoundry/{model_path}"
             if os.path.exists(working_model_path):
                 model_path = working_model_path
-        
+
         logger.info(f"Loading model from: {model_path}")
-        
+
         # Load model using llama_cpp
         model = Llama(
             model_path=model_path,
@@ -86,21 +91,24 @@ def load_model():
             n_gpu_layers=-1,
             seed=1337,
         )
-        
+
         load_time = time.time() - start_time
         logger.info(f"Model loaded in {load_time:.2f} seconds")
-    
+
     return model
+
 
 @app.on_event("startup")
 async def startup_event():
     """Load model on startup"""
     load_model()
 
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {"message": "Edge Foundry Agent is running", "status": "healthy"}
+
 
 @app.get("/health")
 async def health_check():
@@ -110,6 +118,31 @@ async def health_check():
         "model_loaded": model is not None,
         "config": config
     }
+
+
+@app.get("/model-info")
+async def model_info():
+    """Get model information"""
+    return {
+        "model_path": config.get("model_path", "unknown"),
+        "runtime": config.get("runtime", "unknown"),
+        "device": config.get("device", "unknown"),
+        "model_loaded": model is not None,
+        "config": config
+    }
+
+
+@app.get("/metrics")
+async def get_metrics():
+    """Get telemetry metrics"""
+    try:
+        db = telemetry_db
+        metrics_data = db.get_metrics_summary(20)
+        return metrics_data
+    except Exception as e:
+        logger.error(f"Error getting metrics: {e}")
+        return {"error": "Failed to retrieve metrics"}
+
 
 @app.post("/inference", response_model=InferenceResponse)
 async def inference(request: InferenceRequest):
@@ -121,22 +154,22 @@ async def inference(request: InferenceRequest):
         # Ensure model is loaded
         if model is None:
             model = load_model()
-        
+
         # Log the incoming request
         logger.info(f"Received inference request: {request.prompt[:100]}...")
-        
+
         # Get initial memory usage
         initial_memory = get_memory_usage()
-        
+
         # Start timing
         start_time = time.time()
-        
+
         # Format the prompt for better responses (using existing logic)
         formatted_prompt = f"Human: {request.prompt}\nAssistant:"
-        
+
         # Count prompt tokens (approximate)
         prompt_tokens = count_tokens(formatted_prompt)
-        
+
         # Run inference
         result = model(
             formatted_prompt,
@@ -145,21 +178,21 @@ async def inference(request: InferenceRequest):
             echo=False,
             temperature=request.temperature
         )
-        
+
         # Calculate processing time
         processing_time = time.time() - start_time
         latency_ms = processing_time * 1000
-        
+
         # Extract response text
         response_text = result["choices"][0]["text"]
-        
+
         # Count generated tokens (approximate)
         generated_tokens = count_tokens(response_text)
-        
+
         # Get final memory usage
         final_memory = get_memory_usage()
         memory_used = final_memory - initial_memory
-        
+
         # Record telemetry data
         try:
             telemetry_db.record_inference(
@@ -174,10 +207,10 @@ async def inference(request: InferenceRequest):
             logger.info(f"Telemetry recorded: {latency_ms:.2f}ms, {generated_tokens} tokens, {memory_used:.2f}MB")
         except Exception as te:
             logger.error(f"Failed to record telemetry: {te}")
-        
+
         # Log the response and timing
         logger.info(f"Generated response in {processing_time:.2f}s: {response_text[:100]}...")
-        
+
         return InferenceResponse(
             response=response_text,
             processing_time=processing_time,
@@ -189,11 +222,13 @@ async def inference(request: InferenceRequest):
                 "temperature": request.temperature
             }
         )
-        
+
     except Exception as e:
         logger.error(f"Error during inference: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
